@@ -6,7 +6,7 @@ import { ErrorCard } from "@/components/ErrorCard";
 import { ErrorForm } from "@/components/ErrorForm";
 import { ErrorDetails } from "@/components/ErrorDetails";
 import { ErrorEntry } from "@/types/error";
-import { exportToWord } from "@/utils/wordExport";
+import { exportToWord } from "@/utils/word";
 import { Plus, Search, Download, Bug } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -176,7 +176,7 @@ const Index = () => {
             </div>
             <div className="flex gap-3">
               <Button
-                onClick={() => exportToWord(errors, toast)}
+                onClick={() => exportToWord(toast)}
                 variant="outline"
                 className="gap-2"
                 disabled={errors.length === 0}
