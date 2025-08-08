@@ -197,7 +197,7 @@ const Index = () => {
       </div>
 
       {/* Filters and Search */}
-      <div className="max-w-7xl mx-auto px-6 py-6">
+<div className="mx-auto px-6 py-6" style={{ maxWidth: "1600px" }}>
         <div className="flex flex-col md:flex-row gap-4 mb-6">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />

@@ -7,9 +7,9 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-backend
-uploads
-errors.db
+backend/uploads
+backend/errors.db
+backend/__pycache__
 
 
 node_modules
