@@ -39,9 +39,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.on_event("startup")
+async def startup_event():
+    init_db()
+
 # Database setup
 DB_FILE = "errors.db"
-UPLOAD_DIR = "uploads"
+# Use an absolute path for the upload directory
+UPLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads")
 Path(UPLOAD_DIR).mkdir(exist_ok=True)
 
 def init_db():
@@ -78,8 +83,6 @@ def init_db():
     except Exception as e:
         logger.error(f"Failed to initialize database: {str(e)}")
         raise
-
-init_db()
 
 # Pydantic models
 class ErrorBase(BaseModel):
@@ -517,14 +520,44 @@ if __name__ == "__main__":
     
     serve_process = None
     if os.path.exists("dist"):
-        serve_command = ["serve", "-s", "dist", "-l", "7641"]
-        if sys.platform.startswith("win"):
-            serve_process = subprocess.Popen(serve_command, shell=True, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
-        else:
-            serve_process = subprocess.Popen(serve_command, preexec_fn=os.setsid)
-        logger.info(f"Started serve process with PID {serve_process.pid} for dist folder")
+        # Use a more reliable way to serve static files
+        try:
+            # Try to import serve module
+            from http.server import HTTPServer, SimpleHTTPRequestHandler
+            import socketserver
+            
+            class StaticServer(threading.Thread):
+                def __init__(self, port=7641):
+                    threading.Thread.__init__(self, daemon=True)
+                    self.port = port
+                    self.directory = "dist"
+                    
+                def run(self):
+                    os.chdir(self.directory)
+                    handler = SimpleHTTPRequestHandler
+                    httpd = socketserver.TCPServer(("", self.port), handler)
+                    logger.info(f"Serving static files from 'dist' at port {self.port}")
+                    httpd.serve_forever()
+            
+            # Start static file server
+            static_server = StaticServer()
+            static_server.start()
+            logger.info(f"Started static file server for dist folder on port 7641")
+        except Exception as e:
+            logger.error(f"Failed to start static file server: {str(e)}")
+            # Fallback to serve command if available
+            try:
+                serve_command = ["serve", "-s", "dist", "-l", "7641"]
+                if sys.platform.startswith("win"):
+                    serve_process = subprocess.Popen(serve_command, shell=True, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
+                else:
+                    serve_process = subprocess.Popen(serve_command, preexec_fn=os.setsid)
+                logger.info(f"Started serve process with PID {serve_process.pid} for dist folder")
+            except Exception as e:
+                logger.error(f"Failed to start serve process: {str(e)}")
     else:
         logger.warning("dist folder not found, skipping serve command")
+
     def run_app():
         uvicorn.run(app, host="0.0.0.0", port=8768)
 
