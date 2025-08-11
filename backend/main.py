@@ -20,6 +20,7 @@ from docx.shared import Inches, Cm
 from io import BytesIO
 import uvicorn
 import webbrowser
+import webview
 
 
 # Configure logging
@@ -517,16 +518,6 @@ async def startup_event():
         else:
             serve_process = subprocess.Popen(serve_command, preexec_fn=os.setsid)
         logger.info(f"Started serve process with PID {serve_process.pid} for dist folder")
-        
-        # Wait briefly to ensure serve starts
-        await asyncio.sleep(2)
-        
-        # Open default browser to http://localhost:5000
-        try:
-            webbrowser.open("http://localhost:5000")
-            logger.info("Opened http://localhost:5000 in default browser")
-        except Exception as e:
-            logger.error(f"Failed to open browser: {str(e)}")
             
     except Exception as e:
         logger.error(f"Failed to start serve process: {str(e)}")
@@ -547,4 +538,23 @@ async def shutdown_event():
             logger.error(f"Failed to terminate serve process: {str(e)}")
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    import threading
+
+    port = 8000
+
+    def run_app():
+        uvicorn.run(app, host="0.0.0.0", port=port)
+
+    thread = threading.Thread(target=run_app)
+    thread.daemon = True
+    thread.start()
+
+    window = webview.create_window(
+        title="Error Log System",
+        url="http://localhost:5000",
+        width=1024,
+        height=768,
+        resizable=True,
+        min_size=(800, 600)
+    )
+    webview.start()

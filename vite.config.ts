@@ -7,7 +7,7 @@ export default defineConfig(({ mode }) => ({
   base: './', // ✅ relative paths so it works when opening index.html directly
   server: {
     host: "::",
-    port: 3000,
+    port: 5000,
   },
   plugins: [
     react(),
