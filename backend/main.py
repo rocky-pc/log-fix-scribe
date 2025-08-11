@@ -21,6 +21,7 @@ from io import BytesIO
 import uvicorn
 import webbrowser
 import webview
+import signal
 
 
 # Configure logging
@@ -499,51 +500,21 @@ async def export_to_word():
         logger.error(f"Failed to generate Word document: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to generate Word document: {str(e)}")
 
-# Function to start the serve command and open browser
-serve_process = None
-
-@app.on_event("startup")
-async def startup_event():
-    global serve_process
-    try:
-        # Check if dist folder exists
-        if not os.path.exists("dist"):
-            logger.warning("dist folder not found, skipping serve command and browser opening")
-            return
-        
-        # Start serve -s dist on port 5000
+if __name__ == "__main__":
+    import threading
+    
+    serve_process = None
+    if os.path.exists("dist"):
         serve_command = ["serve", "-s", "dist", "-l", "5000"]
         if sys.platform.startswith("win"):
             serve_process = subprocess.Popen(serve_command, shell=True, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
         else:
             serve_process = subprocess.Popen(serve_command, preexec_fn=os.setsid)
         logger.info(f"Started serve process with PID {serve_process.pid} for dist folder")
-            
-    except Exception as e:
-        logger.error(f"Failed to start serve process: {str(e)}")
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    global serve_process
-    if serve_process:
-        try:
-            if sys.platform.startswith("win"):
-                serve_process.send_signal(subprocess.signal.CTRL_BREAK_EVENT)
-            else:
-                os.killpg(os.getpgid(serve_process.pid), signal.SIGTERM)
-            serve_process.terminate()
-            serve_process.wait()
-            logger.info("Serve process terminated")
-        except Exception as e:
-            logger.error(f"Failed to terminate serve process: {str(e)}")
-
-if __name__ == "__main__":
-    import threading
-
-    port = 8000
-
+    else:
+        logger.warning("dist folder not found, skipping serve command")
     def run_app():
-        uvicorn.run(app, host="0.0.0.0", port=port)
+        uvicorn.run(app, host="0.0.0.0", port=8000)
 
     thread = threading.Thread(target=run_app)
     thread.daemon = True
@@ -558,3 +529,15 @@ if __name__ == "__main__":
         min_size=(800, 600)
     )
     webview.start()
+
+    if serve_process:
+        try:
+            if sys.platform.startswith("win"):
+                serve_process.send_signal(subprocess.signal.CTRL_BREAK_EVENT)
+            else:
+                os.killpg(os.getpgid(serve_process.pid), signal.SIGTERM)
+            serve_process.terminate()
+            serve_process.wait()
+            logger.info("Serve process terminated on webview close")
+        except Exception as e:
+            logger.error(f"Failed to terminate serve process on webview close: {str(e)}")
