@@ -47,7 +47,7 @@ const Index = () => {
   useEffect(() => {
     const fetchErrors = async () => {
       try {
-        const response = await fetch("http://localhost:8000/api/errors");
+        const response = await fetch("http://localhost:8768/api/errors");
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const data = await response.json();
         setErrors(data);
@@ -78,8 +78,8 @@ const Index = () => {
       files.forEach((file) => formData.append("files", file));
 
       const url = editingError
-        ? `http://localhost:8000/api/errors/${editingError.id}`
-        : "http://localhost:8000/api/errors";
+        ? `http://localhost:8768/api/errors/${editingError.id}`
+        : "http://localhost:8768/api/errors";
       const method = editingError ? "PUT" : "POST";
 
       const response = await fetch(url, {

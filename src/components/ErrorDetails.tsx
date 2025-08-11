@@ -31,7 +31,7 @@ export function ErrorDetails({ error, onEdit, onClose }: ErrorDetailsProps) {
 
       for (const file of imageFiles) {
         try {
-          const response = await fetch(`http://localhost:8000/api/files/${file.id}`);
+          const response = await fetch(`http://localhost:8768/api/files/${file.id}`);
           if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
           const data = await response.json();
           urls[file.id] = `data:${data.mimetype};base64,${data.content}`;
@@ -54,7 +54,7 @@ export function ErrorDetails({ error, onEdit, onClose }: ErrorDetailsProps) {
 
   const handleDownload = async (fileId: string, filename: string, mimetype: string) => {
     try {
-      const response = await fetch(`http://localhost:8000/api/files/${fileId}`);
+      const response = await fetch(`http://localhost:8768/api/files/${fileId}`);
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
       const binaryString = atob(data.content);

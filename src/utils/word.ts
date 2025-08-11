@@ -5,7 +5,7 @@ type Toast = { title: string; description?: string; variant?: string };
 export const exportToWord = async (toast: ({ title, description, variant }: Toast) => void) => {
   try {
     // Fetch Word document from backend
-    const response = await fetch('http://localhost:8000/api/export/word', {
+    const response = await fetch('http://localhost8768/api/export/word', {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',

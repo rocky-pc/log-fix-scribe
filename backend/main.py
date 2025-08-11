@@ -33,7 +33,7 @@ app = FastAPI()
 # CORS middleware to allow frontend communication
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:8000", "http://localhost:5000"],
+    allow_origins=["http://localhost:7641"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -488,6 +488,18 @@ async def export_to_word():
         buffer.seek(0)
         docx_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
         logger.info("Word document generated successfully")
+        
+                # Define the output directory and filename
+        desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
+        output_dir = os.path.join(desktop_path, "Error Log Report")
+        os.makedirs(output_dir, exist_ok=True)
+        
+        filename = f"Error_Log_Export_{datetime.now().strftime('%Y-%m-%d')}.docx"
+        file_path = os.path.join(output_dir, filename)
+
+        # Save the document to the specified path
+        doc.save(file_path)
+        logger.info(f"Word document saved to: {file_path}")
 
         return JSONResponse(
             content={
@@ -505,7 +517,7 @@ if __name__ == "__main__":
     
     serve_process = None
     if os.path.exists("dist"):
-        serve_command = ["serve", "-s", "dist", "-l", "5000"]
+        serve_command = ["serve", "-s", "dist", "-l", "7641"]
         if sys.platform.startswith("win"):
             serve_process = subprocess.Popen(serve_command, shell=True, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
         else:
@@ -514,7 +526,7 @@ if __name__ == "__main__":
     else:
         logger.warning("dist folder not found, skipping serve command")
     def run_app():
-        uvicorn.run(app, host="0.0.0.0", port=8000)
+        uvicorn.run(app, host="0.0.0.0", port=8768)
 
     thread = threading.Thread(target=run_app)
     thread.daemon = True
@@ -522,9 +534,9 @@ if __name__ == "__main__":
 
     window = webview.create_window(
         title="Error Log System",
-        url="http://localhost:5000",
-        width=1024,
-        height=768,
+        url="http://localhost:7641",
+        width=1450,
+        height=850,
         resizable=True,
         min_size=(800, 600)
     )
