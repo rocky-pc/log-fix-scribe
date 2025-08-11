@@ -312,20 +312,9 @@ async def update_error(
             conn.commit()
             logger.debug(f"Error {error_id} updated in database")
             
-            # Delete existing files if new files are provided
-            if files and any(file.filename for file in files):
-                cursor.execute("SELECT filepath FROM files WHERE error_id = ?", (error_id,))
-                for row in cursor.fetchall():
-                    try:
-                        os.remove(row[0])
-                        logger.debug(f"Deleted file: {row[0]}")
-                    except OSError as e:
-                        logger.warning(f"Failed to delete file {row[0]}: {str(e)}")
-                cursor.execute("DELETE FROM files WHERE error_id = ?", (error_id,))
-                conn.commit()
-                logger.debug(f"Cleared existing files for error_id: {error_id}")
-            
+            # Append new files without deleting existing ones
             file_infos = [save_file(file, error_id) for file in files if file.filename]
+            existing_files = get_files_for_error(error_id)
             
             logger.info(f"Error {error_id} updated successfully")
             return {
@@ -339,7 +328,7 @@ async def update_error(
                 "status": status,
                 "created_at": created_at,
                 "updated_at": updated_at,
-                "files": file_infos
+                "files": existing_files  # Return all files, including existing and new
             }
     except HTTPException:
         raise
@@ -446,7 +435,7 @@ async def export_to_word():
             doc.add_heading(f'Record {idx}', level=1)
             doc.add_paragraph(f"Title: {error['title'] or 'N/A'}")
             doc.add_paragraph(f"Description: {error['description'] or 'N/A'}")
-            doc.add_paragraph(f"Severity: {error['severity'] or 'N/A'}")
+            doc.add_paragraph(f"Severity Fleischman: {error['severity'] or 'N/A'}")
             doc.add_paragraph(f"Category: {error['category'] or 'N/A'}")
             doc.add_paragraph(f"Tags: {', '.join(error['tags']) or 'None'}")
             doc.add_paragraph(f"Solution: {error['solution'] or 'N/A'}")

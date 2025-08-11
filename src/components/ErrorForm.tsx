@@ -61,7 +61,7 @@ export function ErrorForm({ error, onSave, onCancel }: ErrorFormProps) {
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFiles = Array.from(event.target.files || []);
-    const currentImageCount = files.filter((file) => ALLOWED_FILE_TYPES.includes(file.type)).length;
+    const currentImageCount = (error?.files?.filter((file) => ALLOWED_FILE_TYPES.includes(file.mimetype || "application/octet-stream")).length || 0) + files.filter((file) => ALLOWED_FILE_TYPES.includes(file.type)).length;
     const validFiles: File[] = [];
     const invalidFiles: string[] = [];
 
@@ -101,7 +101,6 @@ export function ErrorForm({ error, onSave, onCancel }: ErrorFormProps) {
       });
     }
 
-    // Reset file input to allow re-uploading the same file
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
