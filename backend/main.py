@@ -1,3 +1,7 @@
+import asyncio
+import subprocess
+import sys
+import os
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -5,7 +9,6 @@ from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
 import sqlite3
-import os
 import shutil
 from pathlib import Path
 import uuid
@@ -13,10 +16,11 @@ import json
 import logging
 import base64
 from docx import Document
-from docx.shared import Inches
+from docx.shared import Inches, Cm
 from io import BytesIO
-from docx.shared import Cm
-from fastapi.exceptions import HTTPException
+import uvicorn
+import webbrowser
+
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -27,7 +31,7 @@ app = FastAPI()
 # CORS middleware to allow frontend communication
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:8000"],
+    allow_origins=["http://localhost:3000", "http://localhost:8000", "http://localhost:5000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -328,7 +332,7 @@ async def update_error(
                 "status": status,
                 "created_at": created_at,
                 "updated_at": updated_at,
-                "files": existing_files  # Return all files, including existing and new
+                "files": existing_files
             }
     except HTTPException:
         raise
@@ -472,7 +476,9 @@ async def export_to_word():
                                 logger.warning(f"Failed to add image {filename} for Record {idx}: {str(e)}")
                                 row_cells[j].text = f"Failed to load image: {filename}"
 
-            doc.add_paragraph()  # Add spacing between records
+            # Add page break after each record, except for the last one
+            if idx < len(errors):
+                doc.add_page_break()
 
         # Save document to BytesIO
         buffer = BytesIO()
@@ -491,3 +497,54 @@ async def export_to_word():
     except Exception as e:
         logger.error(f"Failed to generate Word document: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to generate Word document: {str(e)}")
+
+# Function to start the serve command and open browser
+serve_process = None
+
+@app.on_event("startup")
+async def startup_event():
+    global serve_process
+    try:
+        # Check if dist folder exists
+        if not os.path.exists("dist"):
+            logger.warning("dist folder not found, skipping serve command and browser opening")
+            return
+        
+        # Start serve -s dist on port 5000
+        serve_command = ["serve", "-s", "dist", "-l", "5000"]
+        if sys.platform.startswith("win"):
+            serve_process = subprocess.Popen(serve_command, shell=True, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
+        else:
+            serve_process = subprocess.Popen(serve_command, preexec_fn=os.setsid)
+        logger.info(f"Started serve process with PID {serve_process.pid} for dist folder")
+        
+        # Wait briefly to ensure serve starts
+        await asyncio.sleep(2)
+        
+        # Open default browser to http://localhost:5000
+        try:
+            webbrowser.open("http://localhost:5000")
+            logger.info("Opened http://localhost:5000 in default browser")
+        except Exception as e:
+            logger.error(f"Failed to open browser: {str(e)}")
+            
+    except Exception as e:
+        logger.error(f"Failed to start serve process: {str(e)}")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    global serve_process
+    if serve_process:
+        try:
+            if sys.platform.startswith("win"):
+                serve_process.send_signal(subprocess.signal.CTRL_BREAK_EVENT)
+            else:
+                os.killpg(os.getpgid(serve_process.pid), signal.SIGTERM)
+            serve_process.terminate()
+            serve_process.wait()
+            logger.info("Serve process terminated")
+        except Exception as e:
+            logger.error(f"Failed to terminate serve process: {str(e)}")
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)
